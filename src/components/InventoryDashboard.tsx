@@ -61,29 +61,29 @@ export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
 
   const getExpiryBadge = (daysLeft: number) => {
     if (daysLeft < 0) {
-      return <Badge variant="destructive" className="text-xs">Expired</Badge>;
+      return <Badge className="text-xs bg-red-100 text-red-700 border-red-200">Expired</Badge>;
     } else if (daysLeft <= 3) {
-      return <Badge className="text-xs bg-destructive text-destructive-foreground">
+      return <Badge className="text-xs bg-red-100 text-red-700 border-red-200">
         {daysLeft === 0 ? "Today" : `${daysLeft}d left`}
       </Badge>;
     } else if (daysLeft <= 7) {
-      return <Badge className="text-xs bg-warning text-warning-foreground">
+      return <Badge className="text-xs bg-yellow-100 text-yellow-700 border-yellow-200">
         {daysLeft}d left
       </Badge>;
     } else {
-      return <Badge variant="secondary" className="text-xs">{daysLeft}d left</Badge>;
+      return <Badge className="text-xs bg-blue-100 text-blue-700 border-blue-200">{daysLeft}d left</Badge>;
     }
   };
 
   const getItemCardClass = (daysLeft: number) => {
     if (daysLeft < 0) {
-      return "border-destructive bg-destructive-soft";
+      return "bg-red-50";
     } else if (daysLeft <= 3) {
-      return "border-destructive/50 bg-destructive-soft/50";
+      return "bg-red-50";
     } else if (daysLeft <= 7) {
-      return "border-warning/50 bg-warning-soft/50";
+      return "bg-yellow-50";
     }
-    return "border-border";
+    return "";
   };
 
   const stats = useMemo(() => {
@@ -97,53 +97,59 @@ export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-primary/5 to-primary-glow/5 border-primary/20">
-          <CardContent className="p-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-white border border-gray-100 shadow-sm">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold text-primary">{stats.total}</p>
+                <p className="text-sm font-medium text-gray-600">Total Items</p>
+                <p className="text-3xl font-bold text-primary mt-1">{stats.total}</p>
               </div>
-              <Package className="w-8 h-8 text-primary" />
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Package className="w-6 h-6 text-primary" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-warning/5 to-warning/10 border-warning/20">
-          <CardContent className="p-4">
+        <Card className="bg-white border border-gray-100 shadow-sm">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Expiring Soon</p>
-                <p className="text-2xl font-bold text-warning">{stats.expiring}</p>
+                <p className="text-sm font-medium text-gray-600">Expiring Soon</p>
+                <p className="text-3xl font-bold text-warning mt-1">{stats.expiring}</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-warning" />
+              <div className="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-warning" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-destructive/5 to-destructive/10 border-destructive/20">
-          <CardContent className="p-4">
+        <Card className="bg-white border border-gray-100 shadow-sm">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Expired</p>
-                <p className="text-2xl font-bold text-destructive">{stats.expired}</p>
+                <p className="text-sm font-medium text-gray-600">Expired</p>
+                <p className="text-3xl font-bold text-destructive mt-1">{stats.expired}</p>
               </div>
-              <Calendar className="w-8 h-8 text-destructive" />
+              <div className="w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-destructive" />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters and Sort */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
-            <CardTitle className="text-lg">Food Inventory</CardTitle>
-            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+      <Card className="bg-white border border-gray-100 shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
+            <CardTitle className="text-xl font-semibold text-gray-900">Food Inventory</CardTitle>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
               <Select value={filterBy} onValueChange={setFilterBy}>
-                <SelectTrigger className="w-full sm:w-[140px]">
-                  <Filter className="w-4 h-4 mr-2" />
+                <SelectTrigger className="w-full sm:w-[140px] bg-white border-gray-200">
+                  <Filter className="w-4 h-4 mr-2 text-gray-500" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -154,7 +160,7 @@ export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
               </Select>
               
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full sm:w-[140px]">
+                <SelectTrigger className="w-full sm:w-[140px] bg-white border-gray-200">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -167,21 +173,21 @@ export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
           </div>
         </CardHeader>
         
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="p-0">
+          <div className="space-y-0">
             {filteredAndSortedItems.map((item, index) => (
-              <Card 
+              <div 
                 key={item.id} 
-                className={`p-4 transition-smooth hover:shadow-soft animate-slide-up ${getItemCardClass(item.daysLeft)}`}
+                className={`p-6 border-b border-gray-100 last:border-b-0 transition-smooth hover:bg-gray-50 animate-slide-up ${getItemCardClass(item.daysLeft)}`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+                <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-1">
-                      <h4 className="font-medium text-foreground">{item.name}</h4>
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h4 className="font-semibold text-gray-900 text-lg">{item.name}</h4>
                       {getExpiryBadge(item.daysLeft)}
                     </div>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                    <div className="flex items-center space-x-6 text-sm text-gray-600">
                       <span>Qty: {item.quantity} {item.unit}</span>
                       <span className="capitalize">{item.category}</span>
                       <span>Expires: {new Date(item.expiryDate).toLocaleDateString()}</span>
@@ -189,15 +195,17 @@ export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
                   </div>
                   
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="text-primary border-primary/20 hover:bg-primary/5">
+                      <span className="mr-1">✏️</span>
                       Edit
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive-soft">
+                    <Button variant="outline" size="sm" className="text-destructive border-destructive/20 hover:bg-destructive/5">
+                      <span className="mr-1">🗑️</span>
                       Remove
                     </Button>
                   </div>
                 </div>
-              </Card>
+              </div>
             ))}
             
             {filteredAndSortedItems.length === 0 && (

@@ -25,7 +25,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
+    <div className="min-h-screen bg-gray-50">
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -34,7 +34,7 @@ const Index = () => {
         notificationCount={notificationCount}
       />
       
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-6 py-8">
         <div className="animate-slide-up">
           {renderActiveTab()}
         </div>
