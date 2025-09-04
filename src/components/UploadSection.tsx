@@ -3,6 +3,8 @@ import { Upload, Camera, FileImage, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { sendToGemini } from "@/services/geminiService";
+import { addItemsToFirebase } from "@/firebaseUtils";
 
 export function UploadSection() {
   const [isDragging, setIsDragging] = useState(false);
@@ -32,20 +34,62 @@ export function UploadSection() {
     handleFiles(files);
   }, []);
 
+  const handleUpload = async (file: File) => {
+    const extractedItems = await sendToGemini(file);
+    await addItemsToFirebase(extractedItems);
+    return extractedItems;
+  };
+
   const handleFiles = async (files: File[]) => {
     if (files.length === 0) return;
     
     setIsProcessing(true);
     
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsProcessing(false);
-    
-    toast({
-      title: "Upload Complete",
-      description: `Successfully processed ${files.length} file(s). New items added to inventory.`,
-    });
+    try {
+      let totalItemsAdded = 0;
+      let totalFilesProcessed = 0;
+      
+      // Process each file using the new handleUpload function
+      for (const file of files) {
+        try {
+          const extractedItems = await handleUpload(file);
+          totalItemsAdded += extractedItems.length;
+          totalFilesProcessed++;
+          
+        } catch (error) {
+          console.error(`Error processing file ${file.name}:`, error);
+          toast({
+            title: "Processing Error",
+            description: `Failed to process ${file.name}. Please try again.`,
+            variant: "destructive",
+          });
+        }
+      }
+      
+      // Show success message
+      if (totalItemsAdded > 0) {
+        toast({
+          title: "Upload Complete",
+          description: `Successfully processed ${totalFilesProcessed} file(s) and added ${totalItemsAdded} items to inventory.`,
+        });
+      } else {
+        toast({
+          title: "No Items Found",
+          description: "No food items could be extracted from the uploaded images.",
+          variant: "destructive",
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error processing files:', error);
+      toast({
+        title: "Upload Failed",
+        description: "An error occurred while processing the images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (

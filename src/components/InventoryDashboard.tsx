@@ -1,18 +1,24 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { Calendar, AlertTriangle, Package, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GetInventory, GetInventoryWithMetadata, updateItem, deleteItem } from "@/firebaseUtils";
+import { formatExpiryDate } from "@/utils/dateUtils";
+
+import { EditItemDialog } from "@/components/EditItemDialog";
 
 interface FoodItem {
   id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  expiryDate: string;
+  item_name: string;
+  quantity: string;
+  expiry_date: string;
   category: string;
   daysLeft: number;
+  added_at?: string;
+  status?: string;
 }
 
 interface InventoryDashboardProps {
@@ -22,42 +28,52 @@ interface InventoryDashboardProps {
 export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
   const [sortBy, setSortBy] = useState("expiry");
   const [filterBy, setFilterBy] = useState("all");
+  const [items, setItems] = useState<FoodItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingItem, setEditingItem] = useState<FoodItem | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  // Mock data
-  const mockItems: FoodItem[] = [
-    { id: "1", name: "Greek Yogurt", quantity: 2, unit: "containers", expiryDate: "2024-12-28", category: "dairy", daysLeft: 1 },
-    { id: "2", name: "Fresh Spinach", quantity: 1, unit: "bag", expiryDate: "2024-12-29", category: "vegetables", daysLeft: 2 },
-    { id: "3", name: "Sourdough Bread", quantity: 1, unit: "loaf", expiryDate: "2024-12-30", category: "bakery", daysLeft: 3 },
-    { id: "4", name: "Organic Milk", quantity: 1, unit: "carton", expiryDate: "2025-01-02", category: "dairy", daysLeft: 6 },
-    { id: "5", name: "Cherry Tomatoes", quantity: 1, unit: "package", expiryDate: "2025-01-05", category: "vegetables", daysLeft: 9 },
-    { id: "6", name: "Chicken Breast", quantity: 2, unit: "lbs", expiryDate: "2025-01-08", category: "meat", daysLeft: 12 },
-    { id: "7", name: "Cheddar Cheese", quantity: 1, unit: "block", expiryDate: "2025-01-15", category: "dairy", daysLeft: 19 },
-    { id: "8", name: "Pasta", quantity: 3, unit: "boxes", expiryDate: "2025-06-15", category: "pantry", daysLeft: 180 },
-  ];
+  // Load items from Firebase using GetInventory action
+  const loadItems = async () => {
+    try {
+      setLoading(true);
+      const firebaseItems = await GetInventoryWithMetadata();
+      setItems(firebaseItems);
+    } catch (error) {
+      console.error('Error loading items:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadItems();
+  }, []);
 
   const filteredAndSortedItems = useMemo(() => {
-    let items = mockItems.filter(item => 
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    let filteredItems = items.filter(item => 
+      item.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     // Filter
     if (filterBy === "expiring") {
-      items = items.filter(item => item.daysLeft <= 7);
+      filteredItems = filteredItems.filter(item => item.daysLeft <= 7);
     } else if (filterBy === "expired") {
-      items = items.filter(item => item.daysLeft < 0);
+      filteredItems = filteredItems.filter(item => item.daysLeft < 0);
     }
 
     // Sort
-    items.sort((a, b) => {
+    filteredItems.sort((a, b) => {
       if (sortBy === "expiry") return a.daysLeft - b.daysLeft;
-      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "name") return a.item_name.localeCompare(b.item_name);
       if (sortBy === "category") return a.category.localeCompare(b.category);
       return 0;
     });
 
-    return items;
-  }, [searchQuery, sortBy, filterBy]);
+    return filteredItems;
+  }, [items, searchQuery, sortBy, filterBy]);
 
   const getExpiryBadge = (daysLeft: number) => {
     if (daysLeft < 0) {
@@ -75,24 +91,55 @@ export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
     }
   };
 
-  const getItemCardClass = (daysLeft: number) => {
-    if (daysLeft < 0) {
-      return "bg-red-50";
-    } else if (daysLeft <= 3) {
+  const getItemCardStyle = (daysLeft: number) => {
+    if (daysLeft <= 3) {
       return "bg-red-50";
     } else if (daysLeft <= 7) {
       return "bg-yellow-50";
     }
-    return "";
+    return "bg-white";
   };
 
   const stats = useMemo(() => {
-    const total = mockItems.length;
-    const expiring = mockItems.filter(item => item.daysLeft <= 7).length;
-    const expired = mockItems.filter(item => item.daysLeft < 0).length;
+    const total = items.length;
+    const expiring = items.filter(item => item.daysLeft <= 7).length;
+    const expired = items.filter(item => item.daysLeft < 0).length;
     
     return { total, expiring, expired };
-  }, []);
+  }, [items]);
+
+  // Handle edit button click
+  const handleEditItem = (item: FoodItem) => {
+    setEditingItem(item);
+    setIsEditDialogOpen(true);
+  };
+
+  // Handle remove button click
+  const handleRemoveItem = async (item: FoodItem) => {
+    if (window.confirm(`Are you sure you want to remove "${item.item_name}" from your inventory?`)) {
+      try {
+        await deleteItem(item.id);
+        toast({
+          title: "Item Removed",
+          description: `${item.item_name} has been removed from your inventory.`,
+        });
+        loadItems(); // Refresh the inventory
+      } catch (error) {
+        console.error("Error removing item:", error);
+        toast({
+          title: "Remove Failed",
+          description: "Failed to remove the item. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  // Handle edit dialog close
+  const handleEditDialogClose = () => {
+    setIsEditDialogOpen(false);
+    setEditingItem(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -174,49 +221,77 @@ export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
         </CardHeader>
         
         <CardContent className="p-0">
-          <div className="space-y-0">
-            {filteredAndSortedItems.map((item, index) => (
-              <div 
-                key={item.id} 
-                className={`p-6 border-b border-gray-100 last:border-b-0 transition-smooth hover:bg-gray-50 animate-slide-up ${getItemCardClass(item.daysLeft)}`}
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h4 className="font-semibold text-gray-900 text-lg">{item.name}</h4>
-                      {getExpiryBadge(item.daysLeft)}
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-muted-foreground">Loading inventory...</p>
+            </div>
+          ) : filteredAndSortedItems.length === 0 ? (
+            <div className="text-center py-8">
+              <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">
+                {items.length === 0 
+                  ? "No items in your inventory yet. Upload some images to get started!" 
+                  : "No items found matching your search."
+                }
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-0">
+              {filteredAndSortedItems.map((item, index) => (
+                <div 
+                  key={item.id} 
+                  className={`p-6 border-b border-gray-100 last:border-b-0 transition-smooth hover:bg-gray-50 animate-slide-up ${getItemCardStyle(item.daysLeft)}`}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h4 className="font-semibold text-gray-900 text-lg">{item.item_name}</h4>
+                        {getExpiryBadge(item.daysLeft)}
+                      </div>
+                      <div className="flex items-center space-x-6 text-sm text-gray-600">
+                        <span>Qty: {item.quantity}</span>
+                        <span className="capitalize">{item.category}</span>
+                        <span>Expires: {formatExpiryDate(item.expiry_date)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-6 text-sm text-gray-600">
-                      <span>Qty: {item.quantity} {item.unit}</span>
-                      <span className="capitalize">{item.category}</span>
-                      <span>Expires: {new Date(item.expiryDate).toLocaleDateString()}</span>
+                    
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-primary border-primary/20 hover:bg-primary/5"
+                        onClick={() => handleEditItem(item)}
+                      >
+                        <span className="mr-1">✏️</span>
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-destructive border-destructive/20 hover:bg-destructive/5"
+                        onClick={() => handleRemoveItem(item)}
+                      >
+                        <span className="mr-1">🗑️</span>
+                        Remove
+                      </Button>
                     </div>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" className="text-primary border-primary/20 hover:bg-primary/5">
-                      <span className="mr-1">✏️</span>
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-destructive border-destructive/20 hover:bg-destructive/5">
-                      <span className="mr-1">🗑️</span>
-                      Remove
-                    </Button>
                   </div>
                 </div>
-              </div>
-            ))}
-            
-            {filteredAndSortedItems.length === 0 && (
-              <div className="text-center py-8">
-                <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No items found matching your search.</p>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Edit Item Dialog */}
+      <EditItemDialog
+        isOpen={isEditDialogOpen}
+        onClose={handleEditDialogClose}
+        item={editingItem}
+        onItemUpdated={loadItems}
+      />
     </div>
   );
 }
