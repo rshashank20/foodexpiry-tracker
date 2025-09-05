@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Calendar, AlertTriangle, Package, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,12 +34,15 @@ export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
   const [editingItem, setEditingItem] = useState<FoodItem | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
 
   // Load items from Firebase using GetInventory action
   const loadItems = async () => {
+    if (!currentUser) return;
+    
     try {
       setLoading(true);
-      const firebaseItems = await GetInventoryWithMetadata();
+      const firebaseItems = await GetInventoryWithMetadata(currentUser.uid);
       setItems(firebaseItems);
     } catch (error) {
       console.error('Error loading items:', error);
@@ -116,9 +120,11 @@ export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
 
   // Handle remove button click
   const handleRemoveItem = async (item: FoodItem) => {
+    if (!currentUser) return;
+    
     if (window.confirm(`Are you sure you want to remove "${item.item_name}" from your inventory?`)) {
       try {
-        await deleteItem(item.id);
+        await deleteItem(item.id, currentUser.uid);
         toast({
           title: "Item Removed",
           description: `${item.item_name} has been removed from your inventory.`,

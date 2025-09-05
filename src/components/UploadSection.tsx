@@ -3,6 +3,7 @@ import { Upload, Camera, FileImage, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { sendToGemini } from "@/services/geminiService";
 import { addItemsToFirebase } from "@/firebaseUtils";
 
@@ -10,6 +11,7 @@ export function UploadSection() {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -35,8 +37,11 @@ export function UploadSection() {
   }, []);
 
   const handleUpload = async (file: File) => {
+    if (!currentUser) {
+      throw new Error("User must be authenticated to upload items");
+    }
     const extractedItems = await sendToGemini(file);
-    await addItemsToFirebase(extractedItems);
+    await addItemsToFirebase(extractedItems, currentUser.uid);
     return extractedItems;
   };
 

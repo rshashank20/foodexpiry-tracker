@@ -1,15 +1,22 @@
 import { getDocs, collection } from "firebase/firestore";
 import { db } from "../firebase";
 
+// Helper function to get user-specific collection path
+const getUserInventoryPath = (userId) => `users/${userId}/inventory`;
+
 /**
  * GetInventory Action
- * Fetches all items from Firebase inventory collection
+ * Fetches all items from user's Firebase inventory collection
  * Returns an array of items with fields: item_name, quantity, expiry_date
  */
-export const GetInventory = async () => {
+export const GetInventory = async (userId) => {
+  if (!userId) {
+    throw new Error("User must be authenticated to get inventory");
+  }
+  
   try {
-    // Get reference to the inventory collection
-    const inventoryRef = collection(db, "inventory");
+    // Get reference to the user's inventory collection
+    const inventoryRef = collection(db, getUserInventoryPath(userId));
     
     // Fetch all documents from the collection
     const querySnapshot = await getDocs(inventoryRef);
@@ -26,7 +33,7 @@ export const GetInventory = async () => {
       });
     });
     
-    console.log(`GetInventory: Retrieved ${items.length} items from Firebase`);
+    console.log(`GetInventory: Retrieved ${items.length} items from Firebase for user ${userId}`);
     return items;
     
   } catch (error) {
@@ -39,9 +46,13 @@ export const GetInventory = async () => {
  * GetInventoryWithMetadata Action
  * Enhanced version that includes additional metadata for UI display
  */
-export const GetInventoryWithMetadata = async () => {
+export const GetInventoryWithMetadata = async (userId) => {
+  if (!userId) {
+    throw new Error("User must be authenticated to get inventory");
+  }
+  
   try {
-    const inventoryRef = collection(db, "inventory");
+    const inventoryRef = collection(db, getUserInventoryPath(userId));
     const querySnapshot = await getDocs(inventoryRef);
     
     const items = [];
@@ -65,7 +76,7 @@ export const GetInventoryWithMetadata = async () => {
       item.daysLeft = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
     });
     
-    console.log(`GetInventoryWithMetadata: Retrieved ${items.length} items with metadata`);
+    console.log(`GetInventoryWithMetadata: Retrieved ${items.length} items with metadata for user ${userId}`);
     return items;
     
   } catch (error) {

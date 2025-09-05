@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { updateItem } from "@/firebaseUtils";
 
 interface EditItemDialogProps {
@@ -29,6 +30,7 @@ export function EditItemDialog({ isOpen, onClose, item, onItemUpdated }: EditIte
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
 
   // Update form data when item changes
   useEffect(() => {
@@ -53,9 +55,11 @@ export function EditItemDialog({ isOpen, onClose, item, onItemUpdated }: EditIte
     e.preventDefault();
     if (!item) return;
 
+    if (!currentUser) return;
+    
     setIsLoading(true);
     try {
-      await updateItem(item.id, formData);
+      await updateItem(item.id, formData, currentUser.uid);
       toast({
         title: "Item Updated",
         description: `${formData.item_name} has been updated successfully.`,

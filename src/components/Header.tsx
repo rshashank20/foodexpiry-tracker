@@ -1,7 +1,9 @@
-import { Leaf, Search, Bell, Settings } from "lucide-react";
+import { Leaf, Search, Bell, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {
   activeTab: string;
@@ -12,6 +14,25 @@ interface HeaderProps {
 }
 
 export function Header({ activeTab, onTabChange, searchValue, onSearchChange, notificationCount }: HeaderProps) {
+  const { logout, currentUser } = useAuth();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 bg-gradient-subtle border-b border-border backdrop-blur-sm">
       <div className="container mx-auto px-4 py-4">
@@ -42,6 +63,9 @@ export function Header({ activeTab, onTabChange, searchValue, onSearchChange, no
             </div>
             <Button variant="ghost" size="sm">
               <Settings className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout} title="Logout">
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
