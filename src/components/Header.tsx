@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
+import { useNavigate } from "react-router-dom";
 
 interface HeaderProps {
   activeTab: string;
@@ -15,6 +16,7 @@ interface HeaderProps {
 export function Header({ activeTab, onTabChange, searchValue, onSearchChange }: HeaderProps) {
   const { logout, currentUser } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
@@ -48,7 +50,7 @@ export function Header({ activeTab, onTabChange, searchValue, onSearchChange }: 
           
           <div className="flex items-center space-x-3">
             <NotificationDropdown />
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/settings')} title="Settings">
               <Settings className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} title="Logout">
