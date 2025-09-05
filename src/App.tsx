@@ -29,8 +29,8 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <NotificationProvider>
-          <SettingsProvider>
+        <SettingsProvider>
+          <NotificationProvider>
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={
@@ -47,8 +47,8 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-          </SettingsProvider>
-        </NotificationProvider>
+          </NotificationProvider>
+        </SettingsProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
