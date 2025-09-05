@@ -249,12 +249,23 @@ export const recipes: Recipe[] = [
 ];
 
 // Helper function to find recipes based on expiring ingredients
-export const findRecipesForIngredients = (expiringIngredients: string[]): Recipe[] => {
+export const findRecipesForIngredients = (inventoryItems: string[]): Recipe[] => {
+  if (inventoryItems.length === 0) return [];
+  
   return recipes.filter(recipe => 
     recipe.expiringIngredients.some(ingredient => 
-      expiringIngredients.some(expiring => 
-        expiring.toLowerCase().includes(ingredient.toLowerCase()) ||
-        ingredient.toLowerCase().includes(expiring.toLowerCase())
+      inventoryItems.some(inventoryItem => 
+        // More flexible matching - check if ingredient is contained in inventory item or vice versa
+        inventoryItem.toLowerCase().includes(ingredient.toLowerCase()) ||
+        ingredient.toLowerCase().includes(inventoryItem.toLowerCase()) ||
+        // Also check for partial matches with common food categories
+        (ingredient.toLowerCase().includes('yogurt') && inventoryItem.toLowerCase().includes('yogurt')) ||
+        (ingredient.toLowerCase().includes('spinach') && inventoryItem.toLowerCase().includes('spinach')) ||
+        (ingredient.toLowerCase().includes('bread') && inventoryItem.toLowerCase().includes('bread')) ||
+        (ingredient.toLowerCase().includes('banana') && inventoryItem.toLowerCase().includes('banana')) ||
+        (ingredient.toLowerCase().includes('tomato') && inventoryItem.toLowerCase().includes('tomato')) ||
+        (ingredient.toLowerCase().includes('mushroom') && inventoryItem.toLowerCase().includes('mushroom')) ||
+        (ingredient.toLowerCase().includes('avocado') && inventoryItem.toLowerCase().includes('avocado'))
       )
     )
   );

@@ -1,19 +1,18 @@
-import { Leaf, Search, Bell, Settings, LogOut } from "lucide-react";
+import { Leaf, Search, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { NotificationDropdown } from "@/components/NotificationDropdown";
 
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   searchValue: string;
   onSearchChange: (value: string) => void;
-  notificationCount: number;
 }
 
-export function Header({ activeTab, onTabChange, searchValue, onSearchChange, notificationCount }: HeaderProps) {
+export function Header({ activeTab, onTabChange, searchValue, onSearchChange }: HeaderProps) {
   const { logout, currentUser } = useAuth();
   const { toast } = useToast();
 
@@ -48,19 +47,7 @@ export function Header({ activeTab, onTabChange, searchValue, onSearchChange, no
           </div>
           
           <div className="flex items-center space-x-3">
-            <div className="relative">
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="w-4 h-4" />
-                {notificationCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] text-xs flex items-center justify-center p-0"
-                  >
-                    {notificationCount}
-                  </Badge>
-                )}
-              </Button>
-            </div>
+            <NotificationDropdown />
             <Button variant="ghost" size="sm">
               <Settings className="w-4 h-4" />
             </Button>

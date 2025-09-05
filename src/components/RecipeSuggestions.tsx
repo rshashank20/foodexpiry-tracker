@@ -35,11 +35,23 @@ export function RecipeSuggestions() {
           .filter(item => item.daysLeft <= 3 && item.daysLeft >= 0)
           .map(item => item.item_name);
         
+        // Also include all items from inventory for broader recipe matching
+        const allInventoryItems = items.map(item => item.item_name);
+        
         const suggestedRecipes = findRecipesForIngredients(expiringItems);
-        setFilteredRecipes(suggestedRecipes.length > 0 ? suggestedRecipes : recipes.slice(0, 4));
+        const allMatchingRecipes = findRecipesForIngredients(allInventoryItems);
+        
+        // Show recipes that match inventory items, prioritizing expiring items
+        const finalRecipes = suggestedRecipes.length > 0 
+          ? suggestedRecipes 
+          : allMatchingRecipes.length > 0 
+            ? allMatchingRecipes 
+            : [];
+            
+        setFilteredRecipes(finalRecipes);
       } catch (error) {
         console.error('Error loading inventory:', error);
-        setFilteredRecipes(recipes.slice(0, 4));
+        setFilteredRecipes([]);
       } finally {
         setLoading(false);
       }
@@ -284,20 +296,43 @@ export function RecipeSuggestions() {
         <Card className="border-dashed border-2 border-muted-foreground/30">
           <CardContent className="p-6 text-center">
             <ChefHat className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-            <h3 className="font-medium mb-2">No recipes found</h3>
+            <h3 className="font-medium mb-2">
+              {inventory.length === 0 
+                ? "No items in your inventory yet" 
+                : "No recipes found for your ingredients"
+              }
+            </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Try adjusting your search or filter criteria
+              {inventory.length === 0 
+                ? "Add some food items to your inventory to get personalized recipe suggestions"
+                : searchQuery || difficultyFilter !== "all"
+                  ? "Try adjusting your search or filter criteria"
+                  : "We don't have recipes for your current ingredients yet. Try adding more items to your inventory."
+              }
             </p>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                setSearchQuery("");
-                setDifficultyFilter("all");
-              }}
-            >
-              Clear Filters
-            </Button>
+            <div className="flex gap-2 justify-center">
+              {inventory.length === 0 ? (
+                <Button variant="outline" size="sm" onClick={() => window.location.href = '#upload'}>
+                  Add Items
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setDifficultyFilter("all");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => window.location.href = '#upload'}>
+                    Add More Items
+                  </Button>
+                </>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

@@ -8,9 +8,6 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("inventory");
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Mock notification count based on expiring items
-  const notificationCount = 3;
-
   const renderActiveTab = () => {
     switch (activeTab) {
       case "inventory":
@@ -31,7 +28,6 @@ const Index = () => {
         onTabChange={setActiveTab}
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        notificationCount={notificationCount}
       />
       
       <main className="container mx-auto px-6 py-8">
