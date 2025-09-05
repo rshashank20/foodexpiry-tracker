@@ -148,46 +148,46 @@ export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
         <Card className="bg-white border border-gray-100 shadow-sm">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Items</p>
-                <p className="text-3xl font-bold text-primary mt-1">{stats.total}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Total Items</p>
+                <p className="text-2xl sm:text-3xl font-bold text-primary mt-1">{stats.total}</p>
               </div>
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Package className="w-6 h-6 text-primary" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Package className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-white border border-gray-100 shadow-sm">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Expiring Soon</p>
-                <p className="text-3xl font-bold text-warning mt-1">{stats.expiring}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Expiring Soon</p>
+                <p className="text-2xl sm:text-3xl font-bold text-warning mt-1">{stats.expiring}</p>
               </div>
-              <div className="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-warning" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-warning/10 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border border-gray-100 shadow-sm">
-          <CardContent className="p-6">
+        <Card className="bg-white border border-gray-100 shadow-sm sm:col-span-2 lg:col-span-1">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Expired</p>
-                <p className="text-3xl font-bold text-destructive mt-1">{stats.expired}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Expired</p>
+                <p className="text-2xl sm:text-3xl font-bold text-destructive mt-1">{stats.expired}</p>
               </div>
-              <div className="w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-destructive" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-destructive/10 rounded-lg flex items-center justify-center">
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-destructive" />
               </div>
             </div>
           </CardContent>
@@ -247,10 +247,55 @@ export function InventoryDashboard({ searchQuery }: InventoryDashboardProps) {
               {filteredAndSortedItems.map((item, index) => (
                 <div 
                   key={item.id} 
-                  className={`p-6 border-b border-gray-100 last:border-b-0 transition-smooth hover:bg-gray-50 animate-slide-up ${getItemCardStyle(item.daysLeft)}`}
+                  className={`p-4 sm:p-6 border-b border-gray-100 last:border-b-0 transition-smooth hover:bg-gray-50 animate-slide-up ${getItemCardStyle(item.daysLeft)}`}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div className="flex items-center justify-between">
+                  {/* Mobile Layout */}
+                  <div className="flex flex-col space-y-3 sm:hidden">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <h4 className="font-semibold text-gray-900 text-base truncate">{item.item_name}</h4>
+                          {getExpiryBadge(item.daysLeft)}
+                        </div>
+                        <div className="space-y-1 text-sm text-gray-600">
+                          <div className="flex items-center justify-between">
+                            <span>Qty: {item.quantity}</span>
+                            <span className="capitalize text-xs bg-gray-100 px-2 py-1 rounded">{item.category}</span>
+                          </div>
+                          <div className="text-xs">
+                            Expires: {formatExpiryDate(item.expiry_date)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setEditingItem(item);
+                          setIsEditDialogOpen(true);
+                        }}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Package className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDelete(item.id)}
+                        className="flex-1"
+                      >
+                        <AlertTriangle className="w-4 h-4 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Desktop Layout */}
+                  <div className="hidden sm:flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <h4 className="font-semibold text-gray-900 text-lg">{item.item_name}</h4>

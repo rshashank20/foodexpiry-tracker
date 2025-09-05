@@ -30,21 +30,12 @@ const Index = () => {
         onSearchChange={setSearchQuery}
       />
       
-      <main className="container mx-auto px-6 py-8">
+      <main className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <div className="animate-slide-up">
           {renderActiveTab()}
         </div>
       </main>
       
-      {/* Cross-device sync indicator */}
-      <div className="fixed bottom-4 right-4 z-50">
-        <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-elevated text-sm">
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-            <span className="text-muted-foreground">Synced across devices</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

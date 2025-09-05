@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { useNotifications } from "@/contexts/NotificationContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
 import { SettingsTest } from "@/components/SettingsTest";
+import { downloadPDF, ExportData } from "@/utils/pdfExport";
 import { 
   Bell, 
   User, 
@@ -31,7 +32,7 @@ import {
 
 export default function Settings() {
   const { currentUser, logout } = useAuth();
-  const { clearAllNotifications } = useNotifications();
+  const { clearAllNotifications, notifications } = useNotifications();
   const { 
     notificationSettings, 
     displaySettings, 
@@ -43,6 +44,27 @@ export default function Settings() {
     updateAccountSettings
   } = useSettings();
   const { toast } = useToast();
+  
+  const [inventoryCount, setInventoryCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
+
+  // Load real data counts
+  useEffect(() => {
+    const loadDataCounts = async () => {
+      if (!currentUser) return;
+      
+      try {
+        const { GetInventoryWithMetadata } = await import('@/firebaseUtils');
+        const inventoryData = await GetInventoryWithMetadata(currentUser.uid);
+        setInventoryCount(inventoryData.length);
+        setNotificationCount(notifications.length);
+      } catch (error) {
+        console.error('Error loading data counts:', error);
+      }
+    };
+    
+    loadDataCounts();
+  }, [currentUser, notifications]);
 
   const handleNotificationChange = (key: string, value: any) => {
     updateNotificationSettings({ [key]: value });
@@ -76,16 +98,113 @@ export default function Settings() {
     });
   };
 
-  const handleExportData = () => {
-    // TODO: Implement data export
-    toast({
-      title: "Export Started",
-      description: "Your data export will be ready shortly. Check your email.",
-    });
+  const handleExportData = async () => {
+    if (!currentUser) return;
+    
+    try {
+      // Get user's inventory data
+      const { GetInventoryWithMetadata } = await import('@/firebaseUtils');
+      const inventoryData = await GetInventoryWithMetadata(currentUser.uid);
+      
+      // Get user's settings
+      const notificationSettings = localStorage.getItem(`notificationSettings_${currentUser.uid}`);
+      const displaySettings = localStorage.getItem(`displaySettings_${currentUser.uid}`);
+      const privacySettings = localStorage.getItem(`privacySettings_${currentUser.uid}`);
+      const accountSettings = localStorage.getItem(`accountSettings_${currentUser.uid}`);
+      
+      // Create export data
+      const exportData: ExportData = {
+        user: {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName,
+          exportDate: new Date().toISOString()
+        },
+        inventory: inventoryData,
+        settings: {
+          notifications: notificationSettings ? JSON.parse(notificationSettings) : null,
+          display: displaySettings ? JSON.parse(displaySettings) : null,
+          privacy: privacySettings ? JSON.parse(privacySettings) : null,
+          account: accountSettings ? JSON.parse(accountSettings) : null
+        }
+      };
+      
+      // Create and download JSON file
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `fresh-track-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Complete",
+        description: "Your data has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export your data. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!currentUser) return;
+    
+    try {
+      // Get user's inventory data
+      const { GetInventoryWithMetadata } = await import('@/firebaseUtils');
+      const inventoryData = await GetInventoryWithMetadata(currentUser.uid);
+      
+      // Get user's settings
+      const notificationSettings = localStorage.getItem(`notificationSettings_${currentUser.uid}`);
+      const displaySettings = localStorage.getItem(`displaySettings_${currentUser.uid}`);
+      const privacySettings = localStorage.getItem(`privacySettings_${currentUser.uid}`);
+      const accountSettings = localStorage.getItem(`accountSettings_${currentUser.uid}`);
+      
+      // Create export data
+      const exportData: ExportData = {
+        user: {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName,
+          exportDate: new Date().toISOString()
+        },
+        inventory: inventoryData,
+        settings: {
+          notifications: notificationSettings ? JSON.parse(notificationSettings) : null,
+          display: displaySettings ? JSON.parse(displaySettings) : null,
+          privacy: privacySettings ? JSON.parse(privacySettings) : null,
+          account: accountSettings ? JSON.parse(accountSettings) : null
+        }
+      };
+      
+      // Generate and download PDF
+      downloadPDF(exportData);
+      
+      toast({
+        title: "PDF Export Complete",
+        description: "Your inventory report has been downloaded as PDF.",
+      });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast({
+        title: "PDF Export Failed",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDeleteAccount = () => {
-    // TODO: Implement account deletion
     toast({
       title: "Account Deletion",
       description: "Account deletion requires confirmation. Please contact support.",
@@ -93,13 +212,41 @@ export default function Settings() {
     });
   };
 
-  const handleClearAllData = () => {
-    clearAllNotifications();
-    // TODO: Clear all user data
-    toast({
-      title: "Data Cleared",
-      description: "All your data has been cleared successfully.",
-    });
+  const handleClearAllData = async () => {
+    if (!currentUser) return;
+    
+    try {
+      // Clear notifications
+      clearAllNotifications();
+      
+      // Clear inventory data from Firebase
+      const { deleteItem } = await import('@/firebaseUtils');
+      const { GetInventory } = await import('@/firebaseUtils');
+      
+      const items = await GetInventory(currentUser.uid);
+      for (const item of items) {
+        await deleteItem(item.id, currentUser.uid);
+      }
+      
+      // Clear localStorage data
+      localStorage.removeItem(`notifications_${currentUser.uid}`);
+      localStorage.removeItem(`notificationSettings_${currentUser.uid}`);
+      localStorage.removeItem(`displaySettings_${currentUser.uid}`);
+      localStorage.removeItem(`privacySettings_${currentUser.uid}`);
+      localStorage.removeItem(`accountSettings_${currentUser.uid}`);
+      
+      toast({
+        title: "Data Cleared",
+        description: "All your data has been cleared successfully.",
+      });
+    } catch (error) {
+      console.error('Clear data error:', error);
+      toast({
+        title: "Clear Failed",
+        description: "Failed to clear some data. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -633,14 +780,27 @@ export default function Settings() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="space-y-0.5">
-                    <p className="text-sm font-medium">Export Data</p>
+                    <p className="text-sm font-medium">Export Data (JSON)</p>
                     <p className="text-sm text-muted-foreground">
-                      Download all your inventory and recipe data
+                      Download all your inventory and recipe data as JSON
                     </p>
                   </div>
                   <Button variant="outline" onClick={handleExportData}>
                     <Download className="w-4 h-4 mr-2" />
-                    Export
+                    Export JSON
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">Export Report (PDF)</p>
+                    <p className="text-sm text-muted-foreground">
+                      Download a formatted inventory report as PDF
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={handleExportPDF}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export PDF
                   </Button>
                 </div>
 
@@ -682,7 +842,7 @@ export default function Settings() {
                       <Database className="w-4 h-4 text-primary" />
                       <span className="text-sm font-medium">Total Items</span>
                     </div>
-                    <p className="text-2xl font-bold">0</p>
+                    <p className="text-2xl font-bold">{inventoryCount}</p>
                     <p className="text-xs text-muted-foreground">in your inventory</p>
                   </div>
 
@@ -691,7 +851,7 @@ export default function Settings() {
                       <Bell className="w-4 h-4 text-warning" />
                       <span className="text-sm font-medium">Notifications</span>
                     </div>
-                    <p className="text-2xl font-bold">0</p>
+                    <p className="text-2xl font-bold">{notificationCount}</p>
                     <p className="text-xs text-muted-foreground">active alerts</p>
                   </div>
                 </div>

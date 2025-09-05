@@ -24,6 +24,13 @@ export const sendToGemini = async (file) => {
             2. Quantity/amount
             3. Expiry date (if visible)
             
+            IMPORTANT DATE FORMAT INSTRUCTIONS:
+            - If you see dates in DD/MM/YYYY format (like 03/09/25), convert to YYYY-MM-DD (2025-09-03)
+            - If you see dates in MM/DD/YYYY format, convert to YYYY-MM-DD
+            - If you see dates in DD-MM-YYYY format, convert to YYYY-MM-DD
+            - Always assume 2-digit years 20-29 are 2020-2029, 30-99 are 1930-1999
+            - Look for keywords like "USE BY", "EXPIRES", "BEST BEFORE", "EXP DATE"
+            
             Return the data in JSON format as an array of objects with these EXACT fields:
             - item_name: string (the name of the food item)
             - quantity: string (amount/quantity of the item)
@@ -37,7 +44,7 @@ export const sendToGemini = async (file) => {
               {
                 "item_name": "Milk",
                 "quantity": "1 liter",
-                "expiry_date": "2024-01-15"
+                "expiry_date": "2025-09-03"
               }
             ]`
           },
@@ -148,11 +155,20 @@ const parseGeminiResponse = (data) => {
       console.log('Number of items found:', items.length);
 
       // Transform items to match the expected format
-      const transformedItems = items.map(item => ({
-        item_name: item.item_name || item.name || 'Unknown Item',
-        quantity: item.quantity || '1',
-        expiry_date: item.expiry_date || item.expiryDate || item.expiry || estimateExpiry(item.item_name || item.name)
-      }));
+      const transformedItems = items.map(item => {
+        let expiryDate = item.expiry_date || item.expiryDate || item.expiry || estimateExpiry(item.item_name || item.name);
+        
+        // Parse and fix date format if it's not "unknown"
+        if (expiryDate && expiryDate !== 'unknown') {
+          expiryDate = parseDateString(expiryDate);
+        }
+        
+        return {
+          item_name: item.item_name || item.name || 'Unknown Item',
+          quantity: item.quantity || '1',
+          expiry_date: expiryDate
+        };
+      });
 
       console.log('Transformed items:', transformedItems);
       console.log('=== PARSING COMPLETE ===');
@@ -222,6 +238,93 @@ const fileToBase64 = (file) => {
     };
     reader.onerror = error => reject(error);
   });
+};
+
+// Parse date string and convert to YYYY-MM-DD format
+const parseDateString = (dateString) => {
+  if (!dateString || dateString.toLowerCase() === 'unknown') {
+    return 'unknown';
+  }
+
+  // Clean the date string
+  let cleanDate = dateString.trim().replace(/[^\d\/\-\.]/g, '');
+  
+  // Handle different separators
+  const separators = ['/', '-', '.'];
+  let parts = [];
+  
+  for (const sep of separators) {
+    if (cleanDate.includes(sep)) {
+      parts = cleanDate.split(sep);
+      break;
+    }
+  }
+  
+  if (parts.length !== 3) {
+    return 'unknown';
+  }
+  
+  let day, month, year;
+  
+  // Try to determine format based on values
+  const first = parseInt(parts[0]);
+  const second = parseInt(parts[1]);
+  const third = parseInt(parts[2]);
+  
+  // Handle 2-digit years
+  let fullYear = third;
+  if (third < 100) {
+    if (third >= 0 && third <= 29) {
+      fullYear = 2000 + third;
+    } else {
+      fullYear = 1900 + third;
+    }
+  }
+  
+  // Determine format based on values
+  if (first > 12 && second <= 12) {
+    // DD/MM/YYYY format (day > 12, month <= 12)
+    day = first;
+    month = second;
+    year = fullYear;
+  } else if (first <= 12 && second > 12) {
+    // MM/DD/YYYY format (month <= 12, day > 12)
+    day = second;
+    month = first;
+    year = fullYear;
+  } else if (first <= 12 && second <= 12) {
+    // Ambiguous case - for food items, prefer DD/MM/YYYY (international)
+    if (first > second) {
+      // Likely DD/MM/YYYY
+      day = first;
+      month = second;
+      year = fullYear;
+    } else {
+      // Likely MM/DD/YYYY
+      day = second;
+      month = first;
+      year = fullYear;
+    }
+  } else {
+    // Default to DD/MM/YYYY for international format
+    day = first;
+    month = second;
+    year = fullYear;
+  }
+  
+  // Validate the date
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return 'unknown';
+  }
+  
+  // Check if the date is valid
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return 'unknown';
+  }
+  
+  // Format as YYYY-MM-DD
+  return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
 };
 
 // Fallback function to extract items from text if JSON parsing fails
