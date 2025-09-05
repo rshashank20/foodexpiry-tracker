@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
+import { useSettings } from './SettingsContext';
 import { GetInventoryWithMetadata } from '@/firebaseUtils';
 
 export interface Notification {
@@ -40,6 +41,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
+  const { notificationSettings } = useSettings();
 
   // Load notifications from localStorage
   useEffect(() => {
@@ -84,8 +86,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           // Remove old notifications for this item
           setNotifications(prev => prev.filter(n => n.itemId !== itemId));
 
-          // Generate new notifications based on expiry status
-          if (daysLeft < 0) {
+          // Check if notifications are enabled for this type
+          const shouldNotifyExpired = notificationSettings.expiredAlerts;
+          const shouldNotifyExpiring = notificationSettings.expiringAlerts;
+          const shouldNotifyRecipes = notificationSettings.recipeSuggestions;
+          const reminderDays = notificationSettings.reminderDays;
+
+          // Generate new notifications based on expiry status and user settings
+          if (daysLeft < 0 && shouldNotifyExpired) {
             // Item has expired
             newNotifications.push({
               id: `expired_${itemId}_${Date.now()}`,
@@ -99,7 +107,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               read: false,
               actionUrl: '#inventory'
             });
-          } else if (daysLeft === 0) {
+          } else if (daysLeft === 0 && shouldNotifyExpiring) {
             // Item expires today
             newNotifications.push({
               id: `expiring_today_${itemId}_${Date.now()}`,
@@ -111,9 +119,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               daysLeft,
               timestamp: new Date(),
               read: false,
-              actionUrl: '#recipes'
+              actionUrl: shouldNotifyRecipes ? '#recipes' : '#inventory'
             });
-          } else if (daysLeft === 1) {
+          } else if (daysLeft === 1 && shouldNotifyExpiring) {
             // Item expires tomorrow
             newNotifications.push({
               id: `expiring_tomorrow_${itemId}_${Date.now()}`,
@@ -125,10 +133,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               daysLeft,
               timestamp: new Date(),
               read: false,
-              actionUrl: '#recipes'
+              actionUrl: shouldNotifyRecipes ? '#recipes' : '#inventory'
             });
-          } else if (daysLeft <= 3) {
-            // Item expires within 3 days
+          } else if (daysLeft <= reminderDays && shouldNotifyExpiring) {
+            // Item expires within user-defined reminder days
             newNotifications.push({
               id: `expiring_soon_${itemId}_${Date.now()}`,
               type: 'expiring',
@@ -139,7 +147,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               daysLeft,
               timestamp: new Date(),
               read: false,
-              actionUrl: '#recipes'
+              actionUrl: shouldNotifyRecipes ? '#recipes' : '#inventory'
             });
           }
         });
@@ -159,7 +167,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (currentUser) {
       generateNotifications();
     }
-  }, [currentUser]);
+  }, [currentUser, notificationSettings]);
 
   const markAsRead = (notificationId: string) => {
     setNotifications(prev =>

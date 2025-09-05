@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/hooks/use-toast";
+import { SettingsTest } from "@/components/SettingsTest";
 import { 
   Bell, 
   User, 
@@ -111,7 +112,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="notifications" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="notifications" className="flex items-center space-x-2">
             <Bell className="w-4 h-4" />
             <span>Notifications</span>
@@ -131,6 +132,10 @@ export default function Settings() {
           <TabsTrigger value="data" className="flex items-center space-x-2">
             <Database className="w-4 h-4" />
             <span>Data</span>
+          </TabsTrigger>
+          <TabsTrigger value="test" className="flex items-center space-x-2">
+            <Bell className="w-4 h-4" />
+            <span>Test</span>
           </TabsTrigger>
         </TabsList>
 
@@ -693,6 +698,11 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Test Tab */}
+        <TabsContent value="test" className="space-y-6">
+          <SettingsTest />
         </TabsContent>
       </Tabs>
     </div>
